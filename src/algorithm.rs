@@ -1,12 +1,12 @@
 fn find_pivot(table: &Vec<Vec<f64>>) -> Option<(usize, usize)> {
     let mut pivot_col = 0;
     let mut max_change = f64::MIN;
-    for col in 1..table[0].len()-1 {
+    for col in 1..table.len()-1 {
         let mut z = 0.;
-        for row in 1..table.len() {
-            z += table[row][0] * table[row][col];
+        for row in 1..table[0].len() {
+            z += table[0][row] * table[col][row];
         }
-        let net_change = table[0][col] - z;
+        let net_change = table[col][0] - z;
 
         if net_change > max_change { 
             max_change = net_change; 
@@ -18,8 +18,8 @@ fn find_pivot(table: &Vec<Vec<f64>>) -> Option<(usize, usize)> {
 
     let mut pivot_row = 0;
     let mut min_ratio = f64::MAX;
-    for row in 1..table.len() {
-        let ratio = table[row].last().unwrap() / table[row][pivot_col];
+    for row in 1..table[0].len() {
+        let ratio = table.last().unwrap()[row] / table[pivot_col][row];
         if ratio < min_ratio {
             min_ratio = ratio;
             pivot_row = row;
@@ -30,20 +30,20 @@ fn find_pivot(table: &Vec<Vec<f64>>) -> Option<(usize, usize)> {
 }
 
 fn pivot_table(table: &mut Vec<Vec<f64>>, pivot_row: usize, pivot_col: usize) {
-    let pivot_elem = table[pivot_row][pivot_col];
+    let pivot_elem = table[pivot_col][pivot_row];
 
-    table[pivot_row][0] = table[0][pivot_col];
+    table[0][pivot_row] = table[pivot_col][0];
 
-    for col in 1..table[pivot_row].len() {
-        table[pivot_row][col] /= pivot_elem;
+    for col in 1..table.len() {
+        table[col][pivot_row] /= pivot_elem;
     }
 
-    for row in 1..table.len() {
+    for row in 1..table[0].len() {
         if row == pivot_row { continue; }
 
-        let fac = table[row][pivot_col];
-        for col in 1..table[row].len() {
-            table[row][col] -= table[pivot_row][col] * fac;
+        let fac = table[pivot_col][row];
+        for col in 1..table.len() {
+            table[col][row] -= table[col][pivot_row] * fac;
         }
     }
 }
@@ -57,16 +57,16 @@ pub fn solve_simplex(mut table: Vec<Vec<f64>>, mut basic_var_cols: Vec<usize>) -
         pivot_table(&mut table, pivot_row, pivot_col);
     }
 
-    let obj_value = (1..table.len())
-        .map(|row| table[row][0] * table[row].last().unwrap())
+    let obj_value = (1..table[0].len())
+        .map(|row| table[0][row] * table.last().unwrap()[row])
         .sum();
 
-    (0..table.len())
+    (0..table[0].len())
         .map(|row| {
             if row == 0 {
                 (-1, obj_value)
             } else {
-                (basic_var_cols[row-1] as i32, *table[row].last().unwrap())
+                (basic_var_cols[row-1] as i32, table.last().unwrap()[row])
             }
         })
         .collect()
@@ -80,9 +80,12 @@ mod tests {
     #[test]
     fn example1() {
         let table = vec![
-            vec![0., 7., 6., 0., 0., 0.],
-            vec![0., 2., 4., 1., 0., 16.],
-            vec![0., 3., 2., 0., 1., 12.],
+            vec![0., 0., 0.],
+            vec![7., 2., 3.],
+            vec![6., 4., 2.],
+            vec![0., 1., 0.],
+            vec![0., 0., 1.],
+            vec![0., 16., 12.],
         ];
 
         let sol = solve_simplex(table, vec![2, 3]);

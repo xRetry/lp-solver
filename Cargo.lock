@@ -92,7 +92,7 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 [[package]]
 name = "good_lp"
 version = "1.4.0"
-source = "git+https://github.com/xRetry/good_lp.git#54741a3abb1f84659500d071c0e521cdca4a3e1c"
+source = "git+https://github.com/xRetry/good_lp.git#d1650f5ad6a8b51f5ca47c2ca1bda18d60186cc5"
 dependencies = [
  "fnv",
  "highs",
