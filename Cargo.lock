@@ -92,8 +92,7 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 [[package]]
 name = "good_lp"
 version = "1.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eed4d07599e3cdb52477f1d36bef936c89ce854c452e7026b2ba327b93c86f61"
+source = "git+https://github.com/xRetry/good_lp.git#54741a3abb1f84659500d071c0e521cdca4a3e1c"
 dependencies = [
  "fnv",
  "highs",

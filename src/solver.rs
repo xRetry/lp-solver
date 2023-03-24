@@ -1,38 +1,43 @@
 
 use good_lp::{SolverModel, constraint::ConstraintReference, Constraint, 
-    solvers::{ResolutionError, ObjectiveDirection}, variable::UnsolvedProblem };
+    solvers::{ResolutionError, ObjectiveDirection}, variable::UnsolvedProblem, IntoAffineExpression, Variable };
 
 use crate::solution::MySolution;
 use crate::algorithm::solve_simplex;
 
-pub fn my_solver<'a>(to_solve: UnsolvedProblem) -> MySolver<'a> {
-    //let UnsolvedProblem {
-    //    objective,
-    //} = to_solve;
+pub fn my_solver(to_solve: UnsolvedProblem) -> MySolver {
+    let err = match to_solve.direction {
+        ObjectiveDirection::Minimisation => Some(ResolutionError::Other("Minimization not valid")),
+        ObjectiveDirection::Maximisation => None,
+    };
 
-    //let coeffs = objective.linear_coefficients();
+    let coeffs = to_solve.objective.linear_coefficients();
+    let mut variables = Vec::new();
+    let mut table = vec![Vec::new()];
+    for (var, c) in coeffs {
+        variables.push(var);
+        table[0].push(c);
+    }
 
-    //let err = match direction {
-    //    ObjectiveDirection::Minimisation => Some(ResolutionError::Other("Minimization not valid")),
-    //    ObjectiveDirection::Maximisation => None,
-    //};
-    
-    todo!();
-
+    MySolver {
+        table,
+        variables,
+        err,
+    }
 }
 
-pub struct MySolver<'a> {
+pub struct MySolver {
     table: Vec<Vec<f64>>,
-    col_names: Vec<String>,
-    row_names: Vec<&'a String>,
+    variables: Vec<Variable>,
     err: Option<ResolutionError>,
 }
 
-impl<'a> SolverModel for MySolver<'a> {
+impl SolverModel for MySolver {
     type Solution = MySolution;
     type Error = ResolutionError;
 
     fn add_constraint(&mut self, c: Constraint) -> ConstraintReference {
+        //let coeffs = c.expression.linear_coefficients();
         todo!();
     }
 

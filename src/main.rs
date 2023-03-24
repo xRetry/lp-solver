@@ -6,6 +6,7 @@ fn solve_true() -> Result<(), Box<dyn Error>> {
     let mut problem = ProblemVariables::new();
     let a = problem.add(variable().min(0));
     let b = problem.add(variable().min(0));
+
     let solution = problem.maximise(7*a + 6*b)
         //.using(highs) // multiple solvers available
         .using(my_solver)
