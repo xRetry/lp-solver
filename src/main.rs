@@ -53,19 +53,19 @@ impl IntegerSolver {
         }
     }
 
-    fn solve(&self) -> Option<HighsSolution> {
-        self.solve_rec(self.constraints);
+    fn solve(self) -> Option<HighsSolution> {
+        self.solve_rec(self.constraints.clone());
 
         return self.best_solution
     }
 
-    fn solve_rec(&self, constraints: Vec<Constraint>) {
+    fn solve_rec(&self, mut constraints: Vec<Constraint>) {
         let objective = self.problem.objective.clone();
         let variables = self.problem.variables.iter_variables_with_def();
 
-        let mut solver = self.problem.using(highs);
-        for c in constraints {
-            solver = solver.with(c);
+        let mut solver = self.problem.clone().using(highs);
+        for c in &constraints {
+            solver = solver.with(c.clone());
         }
         let solution = solver.solve().unwrap();
 
@@ -84,7 +84,7 @@ impl IntegerSolver {
 
         let Some(next) = next_var else { return; };
 
-        let constraints_lower = constraints.clone();
+        let mut constraints_lower = constraints.clone();
         constraints_lower.push(constraint!(next <= solution.value(next).floor()));
        
         constraints.push(constraint!(next >= solution.value(next).ceil()));
