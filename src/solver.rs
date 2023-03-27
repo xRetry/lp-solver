@@ -1,5 +1,4 @@
-
-use std::{collections::HashMap, ops::BitOrAssign};
+use std::collections::HashMap;
 
 use good_lp::{SolverModel, constraint::ConstraintReference, Constraint, 
     solvers::{ResolutionError, ObjectiveDirection}, variable::UnsolvedProblem, IntoAffineExpression, Variable };
