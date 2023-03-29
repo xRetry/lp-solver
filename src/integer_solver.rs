@@ -11,6 +11,7 @@ pub struct IntegerSolver {
     int_vars: HashSet<Variable>,
     best_solution: Option<HighsSolution>,
     fn_is_better: fn(f64, f64) -> bool,
+    num_evals: usize,
 }
 
 impl IntegerSolver {
@@ -36,10 +37,12 @@ impl IntegerSolver {
             int_vars,
             best_solution: None,
             fn_is_better,
+            num_evals: 0,
         }
     }
 
     fn solve_rec(&mut self, mut constraints: Vec<Constraint>) {
+        self.num_evals += 1;
         let objective = &self.problem.objective;
 
         let mut solver = self.problem.clone().using(highs);
@@ -83,17 +86,35 @@ impl IntegerSolver {
 }
 
 impl SolverModel for IntegerSolver {
-    type Solution = HighsSolution;
+    type Solution = IntegerSolution;
     type Error = ResolutionError;
 
     fn solve(mut self) -> Result<Self::Solution, Self::Error> {
         self.solve_rec(self.constraints.clone());
-        self.best_solution.ok_or(ResolutionError::Other("No Solution found"))
+        let solution = self.best_solution.ok_or(
+            Err(ResolutionError::Other("No Solution found"))
+        );
+
+        return match solution {
+            Ok(sol) => Ok(IntegerSolution{ inner: sol, num_evals: self.num_evals }),
+            Err(err) => err
+        }
     }
 
     fn add_constraint(&mut self, c: Constraint) -> constraint::ConstraintReference {
         self.constraints.push(c);
-        constraint::ConstraintReference { index: self.constraints.len()-1 }
+        constraint::ConstraintReference{ index: self.constraints.len()-1 }
+    }
+}
+
+pub struct IntegerSolution {
+    pub num_evals: usize,
+    inner: HighsSolution,
+}
+
+impl Solution for IntegerSolution {
+    fn value(&self, variable: Variable) -> f64 {
+        self.inner.value(variable)
     }
 }
 
