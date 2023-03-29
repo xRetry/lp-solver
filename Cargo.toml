@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 #good_lp = {version = "1.4.0", features = ["highs"], default-features = false}
 good_lp = {git = "https://github.com/xRetry/good_lp.git", features = ["highs"], default-features = false}
+rand = "0.8.5"
