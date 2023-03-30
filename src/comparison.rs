@@ -2,8 +2,9 @@ use good_lp::{constraint, variable, variable::UnsolvedProblem,
     ProblemVariables, solvers::highs::highs, SolverModel, Solution, Constraint, Expression, Variable};
 use crate::custom_solver::CustomSolver;
 use std::time::{Instant, Duration};
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 
-#[derive(Debug)]
+#[derive(serde::Serialize, Debug)]
 enum UsedSolver {
     Highs,
     Custom,
@@ -39,6 +40,17 @@ impl SolutionSummary {
             duration,
             num_evals
         }
+    }
+}
+
+impl Serialize for SolutionSummary {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut s = serializer.serialize_struct("SolutionSummary", 3)?;
+        s.serialize_field("used_solver", &self.used_solver)?;
+        s.serialize_field("num_vars", &self.weights.len())?;
+        s.serialize_field("duration", &self.duration.as_secs_f64())?;
+        s.serialize_field("num_evals", &self.num_evals)?;
+        s.end()
     }
 }
 

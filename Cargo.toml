@@ -6,6 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-#good_lp = {version = "1.4.0", features = ["highs"], default-features = false}
-good_lp = {git = "https://github.com/xRetry/good_lp.git", features = ["highs"], default-features = false}
+good_lp = { git = "https://github.com/xRetry/good_lp.git", features = ["highs"], default-features = false }
 rand = "0.8.5"
+serde = { version="1.0.159", features=["derive"] }
+csv = "1.2.1"
+chrono = "0.4.24"
+itertools = "0.10.5"
