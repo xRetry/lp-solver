@@ -1,10 +1,14 @@
-use lp_solver::comparison::{SolutionSummary, compare_solvers};
+use lp_solver::{comparison::{SolutionSummary, compare_solvers}, 
+    weight_functions::random_distribution
+};
 
 fn main() {
-    let num_elems = [3, 5, 10];
+    let num_vars = [3, 5, 10];
 
-    let summaries: Vec<[SolutionSummary; 2]> = num_elems.into_iter()
+    let summaries: Vec<SolutionSummary> = num_vars.into_iter()
+        .map(|n| move || random_distribution(n, 0., 100.))
         .map(compare_solvers)
+        .flatten()
         .collect();
 
     dbg!(summaries);

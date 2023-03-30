@@ -5,7 +5,7 @@ use good_lp::{constraint, solvers::highs::{highs, HighsSolution},
     solvers::ObjectiveDirection,
 };
 
-pub struct IntegerSolver {
+pub struct CustomSolver {
     problem: UnsolvedProblem,
     constraints: Vec<Constraint>,
     int_vars: HashSet<Variable>,
@@ -14,7 +14,7 @@ pub struct IntegerSolver {
     num_evals: usize,
 }
 
-impl IntegerSolver {
+impl CustomSolver {
     pub fn new(mut problem: UnsolvedProblem) -> Self {
 
         let int_vars: HashSet<Variable> = problem.variables.iter_variables_with_def()
@@ -31,7 +31,7 @@ impl IntegerSolver {
             ObjectiveDirection::Minimisation => |cur, best| cur < best,
         };
 
-        IntegerSolver { 
+        CustomSolver { 
             problem,
             constraints: Vec::new(),
             int_vars,
@@ -85,8 +85,8 @@ impl IntegerSolver {
     }
 }
 
-impl SolverModel for IntegerSolver {
-    type Solution = IntegerSolution;
+impl SolverModel for CustomSolver {
+    type Solution = CustomSolution;
     type Error = ResolutionError;
 
     fn solve(mut self) -> Result<Self::Solution, Self::Error> {
@@ -96,7 +96,7 @@ impl SolverModel for IntegerSolver {
         );
 
         return match solution {
-            Ok(sol) => Ok(IntegerSolution{ inner: sol, num_evals: self.num_evals }),
+            Ok(sol) => Ok(CustomSolution{ inner: sol, num_evals: self.num_evals }),
             Err(err) => err
         }
     }
@@ -107,12 +107,12 @@ impl SolverModel for IntegerSolver {
     }
 }
 
-pub struct IntegerSolution {
+pub struct CustomSolution {
     pub num_evals: usize,
     inner: HighsSolution,
 }
 
-impl Solution for IntegerSolution {
+impl Solution for CustomSolution {
     fn value(&self, variable: Variable) -> f64 {
         self.inner.value(variable)
     }
@@ -122,14 +122,14 @@ impl Solution for IntegerSolution {
 mod tests {
     use good_lp::{ProblemVariables, variable, constraint, SolverModel, Solution, Variable, Expression};
 
-    use super::IntegerSolver;
+    use super::CustomSolver;
 
     #[test]
     fn test_setup() {
         let mut problem = ProblemVariables::new();
         let a = problem.add(variable().integer().min(0));
         let b = problem.add(variable().min(0));
-        let solver = problem.maximise(a + b).using(IntegerSolver::new);
+        let solver = problem.maximise(a + b).using(CustomSolver::new);
 
         let constr = constraint!(b >= 10);
         let solver = solver.with(constr);
@@ -143,7 +143,7 @@ mod tests {
     fn test_minimization() {
         let mut problem = ProblemVariables::new();
         let x = problem.add(variable().integer().min(5.5));
-        let solution = problem.minimise(x).using(IntegerSolver::new)
+        let solution = problem.minimise(x).using(CustomSolver::new)
             .solve().unwrap();
 
         assert!(solution.value(x) - 6. < 10e-6);
@@ -153,7 +153,7 @@ mod tests {
     fn test_maximization() {
         let mut problem = ProblemVariables::new();
         let x = problem.add(variable().integer().max(5.5));
-        let solution = problem.maximise(x).using(IntegerSolver::new)
+        let solution = problem.maximise(x).using(CustomSolver::new)
             .solve().unwrap();
 
         assert!(solution.value(x) - 5. < 10e-6);
@@ -164,7 +164,7 @@ mod tests {
         let mut problem = ProblemVariables::new();
         let x1 = problem.add(variable().integer().min(0));
         let x2 = problem.add(variable().integer().min(0));
-        let solution = problem.maximise(5*x1 + 8*x2).using(IntegerSolver::new)
+        let solution = problem.maximise(5*x1 + 8*x2).using(CustomSolver::new)
             .with(constraint!(x1 + x2 <= 6))
             .with(constraint!(5*x1 + 9*x2 <= 45))
             .solve().unwrap();
@@ -178,7 +178,7 @@ mod tests {
         let mut problem = ProblemVariables::new();
         let c = problem.add(variable().integer().min(0));
         let t = problem.add(variable().integer().min(0));
-        let solution = problem.maximise(12*c + 13*t).using(IntegerSolver::new)
+        let solution = problem.maximise(12*c + 13*t).using(CustomSolver::new)
             .with(constraint!(6*c + 7*t <= 21))
             .solve().unwrap();
 
@@ -206,7 +206,7 @@ mod tests {
             .map(|(w, v)| *w * *v)
             .sum();
 
-        let solution = problem.maximise(obj).using(IntegerSolver::new)
+        let solution = problem.maximise(obj).using(CustomSolver::new)
             .with(constraint!(constr_lhs <= 40))
             .solve().unwrap();
 
@@ -220,7 +220,7 @@ mod tests {
         let mut problem = ProblemVariables::new();
         let x = problem.add(variable().max(2));
         let t = problem.add(variable());
-        let solution = problem.minimise(t).using(IntegerSolver::new)
+        let solution = problem.minimise(t).using(CustomSolver::new)
             .with(constraint!(x-3 <= t))
             .with(constraint!(-(x-3) <= t))
             .solve().unwrap();
@@ -234,7 +234,7 @@ mod tests {
         let x1 = problem.add(variable().integer().min(0).max(1));
         let x2 = problem.add(variable().integer().min(0).max(1));
         let t = problem.add(variable());
-        let solution = problem.minimise(t).using(IntegerSolver::new)
+        let solution = problem.minimise(t).using(CustomSolver::new)
             .with(constraint!((2*x1-1) + (2*x2-1) <= t))
             .with(constraint!(-((2*x1-1) + (2*x2-1)) <= t))
             .solve().unwrap();
@@ -263,7 +263,7 @@ mod tests {
             .map(|(w, v)| (2 * *v - 1) * *w)
             .sum();
 
-        let solution = problem.minimise(diff).using(IntegerSolver::new)
+        let solution = problem.minimise(diff).using(CustomSolver::new)
             .with(constraint!(constr_weights.clone() <= diff))
             .with(constraint!(-constr_weights <= diff))
             .solve().unwrap();

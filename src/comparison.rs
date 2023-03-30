@@ -1,8 +1,13 @@
 use good_lp::{constraint, variable, variable::UnsolvedProblem,
-    ProblemVariables, solvers::highs::highs, SolverModel, Solution, Constraint, Solver, Expression, Variable};
-use crate::integer_solver::IntegerSolver;
+    ProblemVariables, solvers::highs::highs, SolverModel, Solution, Constraint, Expression, Variable};
+use crate::custom_solver::CustomSolver;
 use std::time::{Instant, Duration};
-use rand::Rng;
+
+#[derive(Debug)]
+enum UsedSolver {
+    Highs,
+    Custom,
+}
 
 #[derive(Clone)]
 struct ProblemSummary {
@@ -14,21 +19,25 @@ struct ProblemSummary {
 
 #[derive(Debug)]
 pub struct SolutionSummary {
+    used_solver: UsedSolver,
     weights: Vec<f64>,
     values: Vec<f64>,
     duration: Duration,
+    num_evals: Option<usize>
 }
 
 impl SolutionSummary {
-    fn new(prob_sum: ProblemSummary, solution: impl Solution, duration: Duration) -> Self {
+    fn new(used_solver: UsedSolver, prob_sum: ProblemSummary, solution: impl Solution, duration: Duration, num_evals: Option<usize>) -> Self {
         let vals = prob_sum.variables.iter()
             .map(|v| solution.value(*v))
             .collect();
 
         SolutionSummary{
+            used_solver,
             weights: prob_sum.weights, 
             values: vals,
             duration,
+            num_evals
         }
     }
 }
@@ -47,23 +56,20 @@ impl PartialEq for SolutionSummary {
     }
 }
 
-pub fn compare_solvers(num_vars: usize) -> [SolutionSummary; 2] {
+pub fn compare_solvers(weight_fn: impl Fn() -> Vec<f64>) -> [SolutionSummary; 2] {
 
-    let problem = create_problem(num_vars);
+    let problem = create_problem(weight_fn);
 
-    let solution1 = run_with_solver(highs, problem.clone());
-    let solution2 = run_with_solver(IntegerSolver::new, problem);
+    let solution1 = run_with_highs_solver(problem.clone());
+    let solution2 = run_with_custom_solver(problem);
 
     assert!(solution1 == solution2);
 
     [solution1, solution2]
 }
 
-fn create_problem(num_vars: usize) -> ProblemSummary {
-    let mut rng = rand::thread_rng();
-    let weights_obj: Vec<f64> = (0..num_vars)
-        .map(|_| rng.gen_range(0.0..100.))
-        .collect();
+fn create_problem(weight_fn: impl Fn() -> Vec<f64>) -> ProblemSummary {
+    let weights_obj = weight_fn();
 
     let mut problem = ProblemVariables::new();
 
@@ -91,8 +97,8 @@ fn create_problem(num_vars: usize) -> ProblemSummary {
     }
 }
 
-fn run_with_solver<S: Solver>(solver: S, problem: ProblemSummary) -> SolutionSummary {
-    let mut solver = problem.inner.clone().using(solver);
+fn run_with_highs_solver(problem: ProblemSummary) -> SolutionSummary {
+    let mut solver = problem.inner.clone().using(highs);
     for c in &problem.constraints {
         solver = solver.with(c.clone());
     }
@@ -101,5 +107,20 @@ fn run_with_solver<S: Solver>(solver: S, problem: ProblemSummary) -> SolutionSum
     let solution = solver.solve().unwrap();
     let duration = time_start.elapsed();
 
-    SolutionSummary::new(problem, solution, duration)
+    SolutionSummary::new(UsedSolver::Highs, problem, solution, duration, None)
+}
+
+fn run_with_custom_solver(problem: ProblemSummary) -> SolutionSummary {
+    let mut solver = problem.inner.clone().using(CustomSolver::new);
+    for c in &problem.constraints {
+        solver = solver.with(c.clone());
+    }
+
+    let time_start = Instant::now();
+    let solution = solver.solve().unwrap();
+    let duration = time_start.elapsed();
+    let num_evals = Some(solution.num_evals);
+
+    SolutionSummary::new(UsedSolver::Custom, problem, solution, 
+        duration, num_evals)
 }
