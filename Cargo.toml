@@ -12,3 +12,6 @@ serde = { version="1.0.159", features=["derive"] }
 csv = "1.2.1"
 chrono = "0.4.24"
 itertools = "0.10.5"
+
+[profile.release]
+opt-level = 3

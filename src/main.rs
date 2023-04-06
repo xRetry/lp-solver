@@ -1,12 +1,20 @@
 use csv;
 use std::fs::OpenOptions;
 use lp_solver::{comparison::{SolutionSummary, compare_solvers}, 
-    weight_functions::random_distribution
+    weight_functions::equal_distribution,
 };
 use chrono::Local;
-use itertools::Itertools;
+use std::time::Duration;
 
-fn write_to_file(solution: SolutionSummary, file_name: &str) {
+fn write_to_file(wtr: &mut csv::Writer<std::fs::File>, solution: SolutionSummary)  {
+
+    wtr.serialize(solution).unwrap();
+    wtr.flush().unwrap();
+}
+
+fn main() {
+    let time_str = Local::now().format("%Y%m%d_%H%M%S");
+    let file_name = format!("data/data_{}.csv", time_str);
 
     let file = OpenOptions::new()
         .write(true)
@@ -15,27 +23,33 @@ fn write_to_file(solution: SolutionSummary, file_name: &str) {
         .open(file_name)
         .unwrap();
 
+    let add_header = false;
     let mut wtr = csv::WriterBuilder::new()
-        .has_headers(false)
+        .has_headers(add_header)
         .from_writer(file);
 
-    wtr.serialize(solution).unwrap();
+    let mut num_vars = 5;
+    loop {
+        num_vars = num_vars + 2;
+        let mut max_weight = 10.;
+        let mut n = 0;
+        loop {
+            max_weight *= 10.;
+            if max_weight > 10e11 { break; }
+            print!("Vars: {}, Weights: {} ... ", num_vars, max_weight);
+            let weights_fn = || equal_distribution(num_vars, max_weight);
+            let solutions = compare_solvers(weights_fn);
 
-    wtr.flush().unwrap();
-}
+            let duration = solutions[1].duration;
+            println!("{:?}", duration);
 
-fn main() {
-    let num_vars = [3, 5, 10];
-    let max_values = [10., 100.];
-    // TODO: Add max_values to SolutionSummary
+            solutions.into_iter()
+                .for_each(|s| write_to_file(&mut wtr, s));
 
-    let time_str = Local::now().format("%Y%m%d_%H%M%S");
-    let file = format!("data/data_{}.csv", time_str);
+            n += 1;
+            if duration > Duration::from_secs(60) { break; }
+        }
 
-    num_vars.into_iter()
-        .cartesian_product(max_values)
-        .map(|(n, m)| move || random_distribution(n, 0., m))
-        .map(compare_solvers)
-        .flatten()
-        .for_each(|s| write_to_file(s, &file));
+        if n == 1 { break; }
+    }
 }

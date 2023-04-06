@@ -23,7 +23,7 @@ pub struct SolutionSummary {
     used_solver: UsedSolver,
     weights: Vec<f64>,
     values: Vec<f64>,
-    duration: Duration,
+    pub duration: Duration,
     num_evals: Option<usize>
 }
 
@@ -48,6 +48,7 @@ impl Serialize for SolutionSummary {
         let mut s = serializer.serialize_struct("SolutionSummary", 3)?;
         s.serialize_field("used_solver", &self.used_solver)?;
         s.serialize_field("num_vars", &self.weights.len())?;
+        s.serialize_field("values", &self.values.iter().max_by(|a, b| a.total_cmp(b)))?;
         s.serialize_field("duration", &self.duration.as_secs_f64())?;
         s.serialize_field("num_evals", &self.num_evals)?;
         s.end()
