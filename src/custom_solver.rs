@@ -56,6 +56,7 @@ impl CustomSolver {
         };
         let objective_value = cur_solution.eval(objective);
 
+        // Determine next integer variable
         let next_var = self.problem.variables.iter_variables_with_def()
             .map(|(v, _)| v)
             .filter(|v| self.int_vars.contains(v))
@@ -74,7 +75,7 @@ impl CustomSolver {
             return;
         };
 
-        // Preparing next recursion
+        // Prepare next recursion
         let mut constraints_lower = constraints.clone();
         constraints_lower.push(constraint!(next <= cur_solution.value(next).floor()));
         constraints.push(constraint!(next >= cur_solution.value(next).ceil()));
