@@ -1,7 +1,7 @@
 use csv;
 use std::fs::OpenOptions;
 use lp_solver::{comparison::{SolutionSummary, compare_solvers}, 
-    weight_functions::random_distribution,
+    weight_functions::{random_distribution, equal_distribution, linear_distribution},
 };
 use chrono::Local;
 use std::time::Duration;
@@ -29,16 +29,17 @@ fn main() {
         .from_writer(file);
 
     let mut num_vars = 5;
-    let num_repeats = 100;
+    let num_repeats = 25;
     let min_weight = 1.;
     let max_weight = 100.;
 
     loop {
         num_vars = num_vars + 2;
-        let mut n = 0;
-        for _ in 0..num_repeats {
-            print!("Vars: {}, Iter: {}/{} ... ", num_vars, n, num_repeats);
-            let weights_fn = || random_distribution(num_vars, min_weight, max_weight);
+        for i in 0..num_repeats {
+            print!("Vars: {}, Iter: {}/{} ... ", num_vars, i, num_repeats);
+            //let weights_fn = || random_distribution(num_vars, min_weight, max_weight);
+            let weights_fn = || linear_distribution(num_vars, min_weight, max_weight);
+            //let weights_fn = || equal_distribution(num_vars, max_weight);
             let solutions = compare_solvers(weights_fn);
 
             let duration = solutions[1].duration;
@@ -47,10 +48,6 @@ fn main() {
             solutions.into_iter()
                 .for_each(|s| write_to_file(&mut wtr, s));
 
-            n += 1;
-            if duration > Duration::from_secs(60) { break; }
         }
-
-        if n == 1 { break; }
     }
 }
