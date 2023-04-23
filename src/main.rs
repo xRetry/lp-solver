@@ -40,7 +40,7 @@ fn main() {
             //let weights_fn = || random_distribution(num_vars, min_weight, max_weight);
             let weights_fn = || linear_distribution(num_vars, min_weight, max_weight);
             //let weights_fn = || equal_distribution(num_vars, max_weight);
-            let solutions = compare_solvers(weights_fn);
+            let solutions = compare_solvers(weights_fn, None);
 
             let duration = solutions[1].duration;
             println!("{:?}", duration);

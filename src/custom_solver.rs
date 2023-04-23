@@ -1,15 +1,17 @@
 use std::collections::HashSet;
-use good_lp::{constraint, solvers::highs::{highs, HighsSolution}, 
+use good_lp::{constraint, solvers::highs::highs, 
     variable::UnsolvedProblem, SolverModel, 
     Solution, Constraint, Variable, ResolutionError,
     solvers::ObjectiveDirection,
 };
+use crate::heuristics::{solution_from_heuristic, StartHeuristic};
+use crate::solution::CustomSolution;
 
 pub struct CustomSolver {
     problem: UnsolvedProblem,
     constraints: Vec<Constraint>,
     int_vars: HashSet<Variable>,
-    best_solution: Option<HighsSolution>,
+    best_solution: Option<CustomSolution>,
     fn_is_better: fn(f64, f64) -> bool,
     num_evals: usize,
 }
@@ -39,6 +41,11 @@ impl CustomSolver {
             fn_is_better,
             num_evals: 0,
         }
+    }
+
+    pub fn add_heuristic(mut self, obj_vals: &Vec<f64>, start_heuristic: StartHeuristic) -> Self {
+        self.best_solution = solution_from_heuristic(obj_vals, start_heuristic);
+        self
     }
 
     fn solve_rec(&mut self, mut constraints: Vec<Constraint>) {
@@ -71,7 +78,7 @@ impl CustomSolver {
         // At this point, the current solution is better
         // -> override best if no next integer variable
         let Some(next) = next_var else { 
-            self.best_solution = Some(cur_solution);
+            self.best_solution = Some(CustomSolution::from(&cur_solution, self.problem.variables.len(), self.num_evals));
             return;
         };
 
@@ -97,8 +104,8 @@ impl SolverModel for CustomSolver {
         );
 
         return match solution {
-            Ok(sol) => Ok(CustomSolution{ inner: sol, num_evals: self.num_evals }),
-            Err(err) => err
+            Err(err) => err,
+            Ok(sol) => Ok(sol),
         }
     }
 
@@ -108,16 +115,6 @@ impl SolverModel for CustomSolver {
     }
 }
 
-pub struct CustomSolution {
-    pub num_evals: usize,
-    inner: HighsSolution,
-}
-
-impl Solution for CustomSolution {
-    fn value(&self, variable: Variable) -> f64 {
-        self.inner.value(variable)
-    }
-}
 
 #[cfg(test)]
 mod tests {

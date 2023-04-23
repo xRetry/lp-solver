@@ -1,6 +1,6 @@
 use good_lp::{constraint, variable, variable::UnsolvedProblem,
     ProblemVariables, solvers::highs::highs, SolverModel, Solution, Constraint, Expression, Variable};
-use crate::custom_solver::CustomSolver;
+use crate::{custom_solver::CustomSolver, heuristics::StartHeuristic};
 use std::time::{Instant, Duration};
 use serde::ser::{Serialize, Serializer, SerializeStruct};
 
@@ -24,11 +24,15 @@ pub struct SolutionSummary {
     weights: Vec<f64>,
     values: Vec<f64>,
     pub duration: Duration,
-    num_evals: Option<usize>
+    num_evals: Option<usize>,
+    start_heuristic: Option<StartHeuristic>,
 }
 
 impl SolutionSummary {
-    fn new(used_solver: UsedSolver, prob_sum: ProblemSummary, solution: impl Solution, duration: Duration, num_evals: Option<usize>) -> Self {
+    fn new(
+        used_solver: UsedSolver, prob_sum: ProblemSummary, solution: impl Solution, duration: Duration, 
+        num_evals: Option<usize>, start_heuristic: Option<StartHeuristic>
+    ) -> Self {
         let vals = prob_sum.variables.iter()
             .map(|v| solution.value(*v))
             .collect();
@@ -38,7 +42,8 @@ impl SolutionSummary {
             weights: prob_sum.weights, 
             values: vals,
             duration,
-            num_evals
+            num_evals,
+            start_heuristic,
         }
     }
 }
@@ -69,12 +74,12 @@ impl PartialEq for SolutionSummary {
     }
 }
 
-pub fn compare_solvers(weight_fn: impl Fn() -> Vec<f64>) -> [SolutionSummary; 2] {
+pub fn compare_solvers(weight_fn: impl Fn() -> Vec<f64>, start_heuristic: Option<StartHeuristic>) -> [SolutionSummary; 2] {
 
     let problem = create_problem(weight_fn);
 
     let solution1 = run_with_highs_solver(problem.clone());
-    let solution2 = run_with_custom_solver(problem);
+    let solution2 = run_with_custom_solver(problem, start_heuristic);
 
     assert!(solution1 == solution2);
 
@@ -120,13 +125,17 @@ fn run_with_highs_solver(problem: ProblemSummary) -> SolutionSummary {
     let solution = solver.solve().unwrap();
     let duration = time_start.elapsed();
 
-    SolutionSummary::new(UsedSolver::Highs, problem, solution, duration, None)
+    SolutionSummary::new(UsedSolver::Highs, problem, solution, duration, None, None)
 }
 
-fn run_with_custom_solver(problem: ProblemSummary) -> SolutionSummary {
+fn run_with_custom_solver(problem: ProblemSummary, start_heuristic: Option<StartHeuristic>) -> SolutionSummary {
     let mut solver = problem.inner.clone().using(CustomSolver::new);
     for c in &problem.constraints {
         solver = solver.with(c.clone());
+    }
+
+    if let Some(heu) = &start_heuristic {
+        solver = solver.add_heuristic(&problem.weights, heu.clone());
     }
 
     let time_start = Instant::now();
@@ -135,5 +144,5 @@ fn run_with_custom_solver(problem: ProblemSummary) -> SolutionSummary {
     let num_evals = Some(solution.num_evals);
 
     SolutionSummary::new(UsedSolver::Custom, problem, solution, 
-        duration, num_evals)
+        duration, num_evals, start_heuristic)
 }
