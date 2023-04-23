@@ -7,8 +7,8 @@ edition = "2021"
 good_lp = { git = "https://github.com/xRetry/good_lp.git", features = ["highs"], default-features = false }
 rand = "0.8.5"
 serde = { version="1.0.159", features=["derive"] }
-csv = "1.2.1"
-chrono = "0.4.24"
+serde_json = "1.0.96"
+#chrono = "0.4.24"
 
 [profile.release]
 opt-level = 3

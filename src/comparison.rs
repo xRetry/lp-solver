@@ -1,8 +1,8 @@
 use good_lp::{constraint, variable, variable::UnsolvedProblem,
     ProblemVariables, solvers::highs::highs, SolverModel, Solution, Constraint, Expression, Variable};
 use crate::{custom_solver::CustomSolver, heuristics::StartHeuristic};
-use std::time::{Instant, Duration};
-use serde::ser::{Serialize, Serializer, SerializeStruct};
+use std::time::Instant;
+use serde::Serialize;
 
 #[derive(serde::Serialize, Debug)]
 enum UsedSolver {
@@ -18,19 +18,19 @@ struct ProblemSummary {
     variables: Vec<Variable>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SolutionSummary {
     used_solver: UsedSolver,
     weights: Vec<f64>,
     values: Vec<f64>,
-    pub duration: Duration,
+    pub duration_sec: f64,
     num_evals: Option<usize>,
     start_heuristic: Option<StartHeuristic>,
 }
 
 impl SolutionSummary {
     fn new(
-        used_solver: UsedSolver, prob_sum: ProblemSummary, solution: impl Solution, duration: Duration, 
+        used_solver: UsedSolver, prob_sum: ProblemSummary, solution: impl Solution, duration_sec: f64, 
         num_evals: Option<usize>, start_heuristic: Option<StartHeuristic>
     ) -> Self {
         let vals = prob_sum.variables.iter()
@@ -41,22 +41,10 @@ impl SolutionSummary {
             used_solver,
             weights: prob_sum.weights, 
             values: vals,
-            duration,
+            duration_sec,
             num_evals,
             start_heuristic,
         }
-    }
-}
-
-impl Serialize for SolutionSummary {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut s = serializer.serialize_struct("SolutionSummary", 3)?;
-        s.serialize_field("used_solver", &self.used_solver)?;
-        s.serialize_field("num_vars", &self.weights.len())?;
-        s.serialize_field("values", &self.values.iter().max_by(|a, b| a.total_cmp(b)))?;
-        s.serialize_field("duration", &self.duration.as_secs_f64())?;
-        s.serialize_field("num_evals", &self.num_evals)?;
-        s.end()
     }
 }
 
@@ -125,7 +113,7 @@ fn run_with_highs_solver(problem: ProblemSummary) -> SolutionSummary {
     let solution = solver.solve().unwrap();
     let duration = time_start.elapsed();
 
-    SolutionSummary::new(UsedSolver::Highs, problem, solution, duration, None, None)
+    SolutionSummary::new(UsedSolver::Highs, problem, solution, duration.as_secs_f64(), None, None)
 }
 
 fn run_with_custom_solver(problem: ProblemSummary, start_heuristic: Option<StartHeuristic>) -> SolutionSummary {
@@ -144,5 +132,5 @@ fn run_with_custom_solver(problem: ProblemSummary, start_heuristic: Option<Start
     let num_evals = Some(solution.num_evals);
 
     SolutionSummary::new(UsedSolver::Custom, problem, solution, 
-        duration, num_evals, start_heuristic)
+        duration.as_secs_f64(), num_evals, start_heuristic)
 }
