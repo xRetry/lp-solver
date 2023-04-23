@@ -120,6 +120,8 @@ impl SolverModel for CustomSolver {
 mod tests {
     use good_lp::{ProblemVariables, variable, constraint, SolverModel, Solution, Variable, Expression};
 
+    use crate::heuristics::StartHeuristic;
+
     use super::CustomSolver;
 
     #[test]
@@ -277,5 +279,55 @@ mod tests {
                 .map(|d| (d < 10e-6) as usize)
                 .sum()
         );
+    }
+
+    #[test]
+    fn test_heuristic1() {
+        let weights_obj = vec![5., 3., 2.];
+
+        let mut problem = ProblemVariables::new();
+
+        let vars: Vec<Variable> = (0..weights_obj.len())
+            .map(|_| problem.add(variable().integer().min(0).max(1)))
+            .collect();
+        let diff = problem.add(variable());
+
+        let constr_weights: Expression = weights_obj.iter()
+            .zip(&vars)
+            .map(|(w, v)| (2 * *v - 1) * *w)
+            .sum();
+
+        let solution = problem.minimise(diff).using(CustomSolver::new)
+            .with(constraint!(constr_weights.clone() <= diff))
+            .with(constraint!(-constr_weights <= diff))
+            .add_heuristic(&weights_obj, StartHeuristic::Greedy)
+            .solve().unwrap();
+
+        assert_eq!(solution.num_evals, 0);
+    }
+
+    #[test]
+    fn test_heuristic2() {
+        let weights_obj = vec![3., 3., 2., 2., 2.];
+
+        let mut problem = ProblemVariables::new();
+
+        let vars: Vec<Variable> = (0..weights_obj.len())
+            .map(|_| problem.add(variable().integer().min(0).max(1)))
+            .collect();
+        let diff = problem.add(variable());
+
+        let constr_weights: Expression = weights_obj.iter()
+            .zip(&vars)
+            .map(|(w, v)| (2 * *v - 1) * *w)
+            .sum();
+
+        let solution = problem.minimise(diff).using(CustomSolver::new)
+            .with(constraint!(constr_weights.clone() <= diff))
+            .with(constraint!(-constr_weights <= diff))
+            .add_heuristic(&weights_obj, StartHeuristic::Greedy)
+            .solve().unwrap();
+
+        assert_eq!(solution.num_evals, 1);
     }
 }
